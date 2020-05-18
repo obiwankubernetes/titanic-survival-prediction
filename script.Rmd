@@ -1,0 +1,170 @@
+### Group Project for TO628 @ UMich Ross
+
+
+## Titanic Survival Model
+
+We want to find out what factors affected passengers' survival when Titanic sank. As survival is a binary measure, this task is well suited for a Logistic Regression analysis.
+
+### Task A: Load and Explore the Data
+
+Training Data (data for building our model) is saved in the file TitanicTrain.csv
+
+You should import TitanicTrain.csv data. Check the structure of the data using str() function.
+
+- PClass: Passenger Class, Sibsp: Number of Siblings/Spouse aboard
+- Parch: Number of Parents/Children aboard
+- Are there variables that are not in the right class? If yes then convert those variables to the correct class
+
+```{r}
+#read data
+titanic <- read.csv("TitanicTrain.csv")
+str(titanic)
+summary(titanic)
+
+#clean data
+#getting rid of non useful columns
+titanic$PassengerId <- NULL
+titanic$Name <- NULL
+titanic$Ticket <- NULL
+titanic$Cabin <- NULL
+#chaging Pclass to factor
+titanic$Pclass <- as.factor(titanic$Pclass)
+#changing NAs in Age to mean of Age
+titanic$Age <- ifelse(is.na(titanic$Age), mean(titanic$Age, na.rm = TRUE), titanic$Age)
+#viewing cleaned data
+summary(titanic)
+
+```
+
+### Task B: Build Our Model
+
+Build a logistic regression model with Survival as the response variable. In this section, let's first build a main effects model. What variables do you need to include as the predictor variables?
+```{r}
+#creating 1st model to determine chance of survival
+survivedmodel <- glm(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked, data = titanic, family = "binomial")
+#viewing summary of 1st model
+summary(survivedmodel)
+
+```
+
+Builging a model is always only the first step. The more important task is **interpreting** the model - what insights does your model give you?
+
+```{}
+Being a second or third class passenger decreases the chances of survival significantly. Being a parent with children is not significant, which is fairly unusual! The fare is irrelevant as long as the passenger is assigned a particular class. Males, also, have a much lower chances of survival compared to female passengers. Finally, having a sibling will also result in a lower chances of survival (this makes sense as most likely only one of them will get to go on the lifeboat).
+```
+
+### Task C: Improve Our Model
+
+> We will likely not be able to do this during the class exercise. This task is for you to do as your homework. 
+
+How can we improve our model. There are several things you can try:
+
+- Do we need any interaction effects?
+- Do any of the variables have non-linear effects - should we include them in the model as a square term?
+- Can we clean the data better? Can we **infer** the missing values rather than losing all that information?
+
+Pay specific attention to how will you compare whether any particular model is **better** than other models. Potential choices are looking at the AIC value and ANOVA test for nested models.
+
+```{r}
+#creating 2nd model - don't consider embarked data
+survivedmodel2 <- glm(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare, data = titanic, family = "binomial")
+#viewing summary 2nd model
+summary(survivedmodel2)
+#creating 3rd model taking into account Class * Sex & removing Parch and Fare
+survivedmodelclass <- glm(Survived ~ Pclass + Sex + Pclass * Sex + Age + SibSp, data = titanic, family = "binomial")
+#viewing summary of 3rd model
+summary(survivedmodelclass)
+#creating 4th model adding an Age*Age
+survivedmodelage <- glm(Survived ~ Pclass + Sex + Pclass * Sex + Age + I(Age * Age) + SibSp, data = titanic, family = "binomial")
+#viewing summary of 4th model
+summary(survivedmodelage)
+#creating 5th model looking at sex of parent w/ child
+survivedmodelparent <- glm(Survived ~ Pclass + Sex + Age + SibSp + Parch + Parch * Sex, data = titanic, family = "binomial")
+#viewing summary of 5th model
+summary(survivedmodelparent)
+#Tweaking 4th model by removing sibling/spouse as it was not significant in our first model
+survivedmodelage2 <- glm(Survived ~ Pclass + Sex + Pclass * Sex + Age + I(Age * Age) , data = titanic, family = "binomial")
+summary(survivedmodelage2)
+#Tweaking 4th model by adding sibling/spouse and pclass to see how class probabilities change when we add sibling/spouse into the mix
+survivedmodelage3 <- glm(Survived ~ Pclass + Sex + Pclass * Sex + Age + I(Age * Age) + SibSp + Pclass*SibSp, data = titanic, family = "binomial")
+summary(survivedmodelage3)
+#Tweaking 4th model to see if age and sex together have any impact
+survivedmodelage4 <- glm(Survived ~ Pclass + Sex + Pclass * Sex + Sex * Age + Age + I(Age * Age) + SibSp, data = titanic, family = "binomial")
+summary(survivedmodelage4)
+
+
+
+```
+
+What is your best model? Explain your best model - what are you seeing as significant? What is the interpretation? What does it mean?
+
+```{}
+Our last model that tries to analyze the relationship between sex and age and also class and sex is our favorite model. First, it explains how the older someone is the lower are their chances of survival. However older men has less chances to survive than females. It retains the relationship with sex and class and also age*age which tells us that there is a sweet spot of age. Being too young and too old are similar while being in the middle is detrimental. 
+```
+
+### Task D: Predict Outcomes in Testing Data
+
+> We will likely not be able to do this during the class exercise. This task is for you to do as your homework. 
+
+We have saved a small part of data to test our model. This is the **Testing Data**. We will use this data to see how good of a prediction is made by the model we created in Task D above.
+
+You should do the following:
+
+- Import the testing data in TitanicTest.csv
+- Check that you have all the predictor variables. It will natually not have the response variable
+- Do any variable need recoding to match the training dataset? If yes then do the necessary variable recoding
+- Predict the Survival Probability for the Testing Dataset using the model developed on the training dataset in Step C above
+- Convert probabilities to a a binary outcome (1 for Prob > 0.5, otherwise 0 - or choose your own threshold)
+
+
+```{r}
+titanictest <- read.csv("TitanicTest.csv")
+str(titanictest)
+summary(titanictest)
+
+#clean data
+#getting rid of non useful columns
+titanictest$Name <- NULL
+titanictest$Ticket <- NULL
+titanictest$Cabin <- NULL
+#chaging Pclass to factor
+titanictest$Pclass <- as.factor(titanictest$Pclass)
+#changing NAs in Age to mean of Age
+titanictest$Age <- ifelse(is.na(titanictest$Age), mean(titanictest$Age, na.rm = TRUE), titanictest$Age)
+#viewing cleaned data
+summary(titanictest)
+
+#Changing probability to binary outcomes (if probability is greater than 0.5 it takes the value 1 meaning survive and otherwise it is 0)
+pred <- predict(survivedmodelage4, newdata = titanictest, type = "response")
+predbinary <- ifelse(pred>0.5, 1, 0)
+predbinary
+titanictest$Survived <- predbinary
+titanictest$Survived
+kaggle <- titanictest[c("PassengerId","Survived")]
+write.csv(kaggle, file = "KaggleSub.csv", row.names = FALSE)
+
+
+
+
+
+```
+
+### Task E: Compete with Rest of the World
+
+What you just did happens to be one of the ongoing competitions at kaggle.com. https://www.kaggle.com/c/titanic has more details. Once you have predicted outcomes on the test data, you need to create a submission file that has two columns: "PasserngerID" and "Survived".
+The second column should have 1 or 0 for survived or not. NA or missing values in this field is not permitted. 
+Create an account at kaggle and upload your solution at https://www.kaggle.com/c/titanic/submit
+
+Kaggle will evaluate your submission and let you know 
+
+1. What is your score (how good is your prediction)
+2. What is your rank among all submissions 
+
+```{}
+Enter here the following:
+1. -
+2. 123
+3. Our biggest learning in this exercise has been experimenting with different prediction models to see which explains some of our hypothesis the most. Tweaking our models to include relationship between different variables gave us a clearer picture to draw more inferences. 
+```
+
+
